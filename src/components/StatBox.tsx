@@ -30,25 +30,31 @@ export function StatBox({ title, children, flex, height, style }: StatBoxProps) 
     </box>
   );
 }
-export function ProgressBar({ percent, label, color = "#58a6ff" }: { percent: number; label: string; color?: string }) {
-  // Ultra-compact bar for small screens
-  const barWidth = 10;
-  const safePercent = Math.max(0, Math.min(100, isNaN(percent) ? 0 : percent));
-  const filled = Math.round((safePercent / 100) * barWidth);
-  const empty = barWidth - filled;
-  const bar = "█".repeat(filled) + "░".repeat(empty);
+export function ProgressBar({ percent, label, color = "#58a6ff", width }: { percent: number; label: string; color?: string; width?: number }) {
+  const safePercent = isNaN(percent) || !isFinite(percent) ? 0 : Math.max(0, Math.min(100, percent));
+  
+  // Use provided width or a default. We subtract 2 to account for padding/margins
+  const totalBlocks = Math.max(5, Math.floor((width || 25) - 2)); 
+  const filledBlocks = Math.round((safePercent / 100) * totalBlocks);
+  const emptyBlocks = Math.max(0, totalBlocks - filledBlocks);
+  
+  const bar = "█".repeat(filledBlocks) + "▒".repeat(emptyBlocks);
 
   return (
-    <box style={{ flexDirection: "row", height: 1, alignItems: "center" }}>
-      <text style={{ width: 6, fg: "#c9d1d9" }} truncate="end">{label}</text>
-      <text fg={color} style={{ marginLeft: 1 }}>{bar}</text>
-      <text style={{ width: 5, fg: "#8b949e", textAlign: "right" }}>{Math.round(safePercent)}%</text>
+    <box style={{ flexDirection: "column", marginBottom: 1, flex: 1 }}>
+      <box style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 0 }}>
+        <text fg="#c9d1d9" bold>{label}</text>
+        <text fg="#8b949e">{Math.round(safePercent)}%</text>
+      </box>
+      <box style={{ flexDirection: "row", height: 1, flex: 1 }}>
+        <text fg={color} style={{ flex: 1 }}>{bar}</text>
+      </box>
     </box>
   );
 }
 
-export function Sparkline({ data, height = 2, color = "#f85149" }: { data: number[], height?: number, color?: string }) {
-  const fixedWidth = 20;
+export function Sparkline({ data, height = 2, color = "#f85149", width }: { data: number[], height?: number, color?: string, width?: number }) {
+  const sparkWidth = Math.floor(width || 20);
   if (data.length === 0) return <text fg="#484f58">Initializing...</text>;
 
   const min = Math.min(...data);
@@ -62,12 +68,12 @@ export function Sparkline({ data, height = 2, color = "#f85149" }: { data: numbe
     return blocks[idx];
   }).join("");
 
-  // Pad with spaces to keep width consistent
-  const paddedSpark = sparkline.padStart(fixedWidth, " ");
+  // Pad or slice to keep width consistent
+  const displaySpark = sparkline.slice(-sparkWidth).padStart(sparkWidth, " ");
 
   return (
-    <box style={{ flexDirection: "column", gap: 0, height: 2 }}>
-      <text fg={color} bold>{paddedSpark}</text>
+    <box style={{ flexDirection: "column", gap: 0, height: height }}>
+      <text fg={color} bold>{displaySpark}</text>
       <box style={{ flexDirection: "row", justifyContent: "space-between", height: 1 }}>
         <text fg="#8b949e" style={{ fontSize: 0.8 }}>{Math.floor(min)}°</text>
         <text fg="#8b949e" style={{ fontSize: 0.8 }}>{Math.floor(max)}°</text>

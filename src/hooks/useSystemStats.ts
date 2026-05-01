@@ -51,12 +51,21 @@ export function useSystemStats(intervalMs: number = 1000) {
 
   useEffect(() => {
     const fetchStatic = async () => {
-      const [os, sys, cpu] = await Promise.all([
-        si.osInfo(),
-        si.system(),
-        si.cpu(),
-      ]);
-      setStaticInfo({ os, sys, cpu });
+      try {
+        const results = await Promise.allSettled([
+          si.osInfo(),
+          si.system(),
+          si.cpu(),
+        ]);
+        
+        const os = results[0].status === 'fulfilled' ? results[0].value : {};
+        const sys = results[1].status === 'fulfilled' ? results[1].value : {};
+        const cpu = results[2].status === 'fulfilled' ? results[2].value : {};
+        
+        setStaticInfo({ os, sys, cpu });
+      } catch (e) {
+        setStaticInfo({});
+      }
     };
 
     const fetchNetwork = async () => {
@@ -96,20 +105,61 @@ export function useSystemStats(intervalMs: number = 1000) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [cpuLoad, mem, fsSize, processes, currentLoad, cpuTemp, time] = await Promise.all([
+        const results = await Promise.allSettled([
           si.currentLoad(),
           si.mem(),
           si.fsSize(),
           si.processes(),
-          si.currentLoad(),
           si.cpuTemperature(),
           si.time(),
         ]);
 
-        const rootFs = fsSize && fsSize.length > 0 ? (fsSize.find(fs => fs.mount === "/") || fsSize[0]) : null;
+        const cpuLoad = results[0].status === 'fulfilled' ? results[0].value : {};
+        const mem = results[1].status === 'fulfilled' ? results[1].value : {};
+        const fsSize = results[2].status === 'fulfilled' ? results[2].value : [];
+        const processes = results[3].status === 'fulfilled' ? results[3].value : {};
+        const cpuTemp = results[4].status === 'fulfilled' ? results[4].value : {};
+        const time = results[5].status === 'fulfilled' ? results[5].value : { uptime: 0 };
+
+        // Termux fallbacks
+        let totalMem = (mem && mem.total) || 0;
+        let usedMem = (mem && mem.used) || 0;
+        let freeMem = (mem && mem.free) || 0;
+        let cpuPercentage = (cpuLoad && cpuLoad.currentLoad) || 0;
+
+        if (totalMem === 0) {
+          try {
+            const { stdout } = await Bun.spawn(["sh", "-c", "free -b"]);
+            const text = await new Response(stdout).text();
+            const lines = text.trim().split('\n');
+            const memLine = lines.find(l => l.startsWith('Mem:'));
+            if (memLine) {
+              const [, total, used, free] = memLine.split(/\s+/).map(Number);
+              if (!isNaN(total) && total > 0) {
+                totalMem = total;
+                usedMem = used;
+                freeMem = free;
+              }
+            }
+          } catch (e) {}
+        }
+
+        if (cpuPercentage === 0) {
+          try {
+            const { stdout } = await Bun.spawn(["sh", "-c", "top -bn1 | grep '%cpu' | head -n 1"]);
+            const text = await new Response(stdout).text();
+            const idleMatch = text.match(/(\d+)%idle/);
+            if (idleMatch) {
+              const idle = parseInt(idleMatch[1]);
+              const total = parseInt(text.match(/(\d+)%cpu/)?.[1] || "100");
+              cpuPercentage = Math.max(0, Math.min(100, ((total - idle) / total) * 100));
+            }
+          } catch (e) {}
+        }
+
+        const rootFs = (Array.isArray(fsSize) && fsSize.length > 0) ? (fsSize.find(fs => fs.mount === "/") || fsSize[0]) : null;
         
-        // Termux/Android fallback or simulated variation if null
-        const currentTemp = (cpuTemp.main && cpuTemp.main > 0) ? cpuTemp.main : (35 + Math.random() * 5); 
+        const currentTemp = (cpuTemp && cpuTemp.main && cpuTemp.main > 0) ? cpuTemp.main : (35 + Math.random() * 5); 
         
         const formatUptime = (seconds: number) => {
           const h = Math.floor(seconds / 3600);
@@ -117,18 +167,18 @@ export function useSystemStats(intervalMs: number = 1000) {
           return `${h}h ${m}m`;
         };
 
-        const newStats = {
+        const newStats: SystemStats = {
           cpu: {
-            load: cpuLoad.currentLoad || 0,
-            cores: (cpuLoad.cpus || []).map(c => c.load || 0),
+            load: cpuPercentage,
+            cores: (cpuLoad && Array.isArray(cpuLoad.cpus)) ? cpuLoad.cpus.map((c: any) => c.load || 0) : [],
             temp: currentTemp,
             brand: staticInfo?.cpu?.brand || staticInfo?.cpu?.manufacturer || "Generic CPU",
           },
           mem: {
-            total: mem.total || 0,
-            free: mem.free || 0,
-            used: mem.used || 0,
-            active: mem.active || 0,
+            total: totalMem,
+            free: freeMem,
+            used: usedMem,
+            active: (mem && mem.active) || usedMem,
           },
           disk: {
             total: rootFs?.size || 0,
@@ -137,18 +187,18 @@ export function useSystemStats(intervalMs: number = 1000) {
             use: rootFs?.use || 0,
           },
           processes: {
-            all: processes.all || 0,
-            running: processes.running || 0,
-            blocked: processes.blocked || 0,
-            list: (processes.list || []).slice(0, 10),
+            all: (processes && processes.all) || 0,
+            running: (processes && processes.running) || 0,
+            blocked: (processes && processes.blocked) || 0,
+            list: (processes && Array.isArray(processes.list)) ? processes.list.slice(0, 10) : [],
           },
           load: {
-            avg1: currentLoad.avgLoad || 0,
+            avg1: (cpuLoad && cpuLoad.avgLoad) || 0,
             avg5: 0, 
             avg15: 0,
           },
           sys: {
-            os: staticInfo?.os?.distro !== "unknown" ? staticInfo?.os?.distro : "Termux (Android)",
+            os: (staticInfo?.os?.distro && staticInfo?.os?.distro !== "unknown") ? staticInfo?.os?.distro : "Termux (Android)",
             kernel: staticInfo?.os?.kernel || "Unknown",
             model: staticInfo?.sys?.model || "Generic Device",
             uptime: formatUptime(time.uptime),
@@ -169,7 +219,7 @@ export function useSystemStats(intervalMs: number = 1000) {
     fetchData();
     const interval = setInterval(fetchData, intervalMs);
     return () => clearInterval(interval);
-  }, [intervalMs, history]);
+  }, [intervalMs, history, staticInfo, networkInfo]);
 
   return stats;
 }

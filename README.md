@@ -11,6 +11,22 @@ Biro2 adalah CLI screensaver interaktif dan modern yang dibangun menggunakan **O
 - **Daftar Proses**: Menampilkan top proses yang paling banyak menggunakan sumber daya.
 - **Responsif (Mobile Friendly)**: Optimal untuk layar kecil seperti **Termux** dengan layout adaptif.
 - **Integrasi Terminal**: Menggunakan background asli terminal Anda (Transparent UI).
+- **Daftar Proyek (Recent Projects)**: Melacak dan menampilkan daftar folder atau repositori git yang baru dibuka secara cerdas.
+- **Footer Animasi Dinamis**: 
+    - **Randomized Styles**: Memilih secara acak antara gaya *Aero Bullet (Shinkansen)*, *Cyber Scan (Satellite)*, *Debug Mode (Droid)*, dan *Retro Cruise (Pacman)* setiap kali dijalankan.
+    - **Sarcastic AI Bot**: Integrasi robot AI (OpenAI, Gemini, Claude, dsb) yang memberikan komentar sarkasme tajam tentang kebiasaan developer.
+- **Konfigurasi AI Luas**: Mendukung 6 provider AI utama (OpenAI, Google Gemini, Anthropic, DeepSeek, OpenRouter, Groq).
+
+## 🛠️ Konfigurasi AI
+
+Untuk mengaktifkan fitur **Sarcastic AI Bot**, Anda perlu menyiapkan API Key:
+
+1. Salin file contoh konfigurasi:
+   ```bash
+   cp .env.example .env
+   ```
+2. Buka `.env` dan masukkan API Key provider Anda.
+3. Atur `PROVIDER=X` (misal: 2 untuk Google Gemini).
 
 ## 🛠️ Instalasi
 

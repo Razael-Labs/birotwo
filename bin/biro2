@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+# Get the absolute path of the actual file (resolving symlinks)
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+PROJECT_DIR="$( cd -P "$( dirname "$SOURCE" )/.." && pwd )"
+
+# Detect and set local timezone for Bun/Node
+if [ -z "$TZ" ]; then
+  SYSTEM_TZ=$(getprop persist.sys.timezone 2>/dev/null)
+  if [ -n "$SYSTEM_TZ" ]; then
+    export TZ="$SYSTEM_TZ"
+  fi
+fi
+
+# Run the screensaver using bun
+exec bun run "$PROJECT_DIR/src/index.tsx"

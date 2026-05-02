@@ -6,10 +6,21 @@ on:
       - 'v*'
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+  build:
+    name: Build for ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x64
+            target: bun-linux-x64
+            binary_name: biro2-linux-x64
+          - os: ubuntu-24.04-arm
+            arch: arm64
+            target: bun-linux-arm64
+            binary_name: biro2-linux-arm64
+    
     steps:
       - uses: actions/checkout@v4
       
@@ -18,44 +29,48 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        run: |
-          bun install
-          # Force install all native platform packages to ensure they are available for cross-compilation
-          bun add @opentui/core-linux-x64 @opentui/core-linux-arm64
+        run: bun install
 
-      - name: Debug dependencies
+      - name: Build Binary
         run: |
-          ls -R node_modules/@opentui/core-linux-x64 2>/dev/null || echo "x64 native package missing"
-          ls -R node_modules/@opentui/core-linux-arm64 2>/dev/null || echo "arm64 native package missing"
+          bun build src/index.tsx --compile --outfile ${{ matrix.binary_name }}
 
-      - name: Build Binaries
+      - name: Generate Checksum
         run: |
-          # Build for Linux x64
-          bun build src/index.tsx --compile \
-            --target=bun-linux-x64 \
-            --define "process.platform='linux'" \
-            --define "process.arch='x64'" \
-            --outfile biro2-linux-x64
-          
-          # Build for Linux ARM64 (Termux compatible)
-          bun build src/index.tsx --compile \
-            --target=bun-linux-arm64 \
-            --define "process.platform='linux'" \
-            --define "process.arch='arm64'" \
-            --outfile biro2-linux-arm64
+          sha256sum ${{ matrix.binary_name }} > ${{ matrix.binary_name }}.sha256
 
-      - name: Generate Checksums
-        run: |
-          sha256sum biro2-linux-x64 > biro2-linux-x64.sha256
-          sha256sum biro2-linux-arm64 > biro2-linux-arm64.sha256
-          cat *.sha256 > checksums.txt
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.arch }}
+          path: |
+            ${{ matrix.binary_name }}
+            ${{ matrix.binary_name }}.sha256
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binaries-*
+          merge-multiple: true
+
+      - name: Generate Combined Checksums
+        run: cat *.sha256 > checksums.txt
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             biro2-linux-x64
+            biro2-linux-x64.sha256
             biro2-linux-arm64
+            biro2-linux-arm64.sha256
             checksums.txt
           draft: false
           prerelease: false

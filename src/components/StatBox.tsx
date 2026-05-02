@@ -14,7 +14,7 @@ export function StatBox({ title, children, flex, height, style }: StatBoxProps) 
       title={` ${title} `}
       style={{
         borderStyle: "single",
-        padding: { left: 1, right: 1 },
+        padding: 1,
         flex: flex || 1,
         height: height,
         flexDirection: "column",
@@ -22,15 +22,15 @@ export function StatBox({ title, children, flex, height, style }: StatBoxProps) 
         titleColor: "#58a6ff",
         overflow: "hidden", 
         ...style,
-      }}
+      } as any}
     >
-      <box style={{ flexDirection: "column", flex: 1, marginTop: 0 }}>
+      <box style={{ flexDirection: "column", flex: 1, marginTop: 0 } as any}>
         {children}
       </box>
     </box>
   );
 }
-export function ProgressBar({ percent, label, color = "#58a6ff", width }: { percent: number; label: string; color?: string; width?: number }) {
+export const ProgressBar = React.memo(({ percent, label, color = "#58a6ff", width }: { percent: number; label: string; color?: string; width?: number }) => {
   const safePercent = isNaN(percent) || !isFinite(percent) ? 0 : Math.max(0, Math.min(100, percent));
   
   // Use provided width or a default. We subtract 2 to account for padding/margins
@@ -41,21 +41,21 @@ export function ProgressBar({ percent, label, color = "#58a6ff", width }: { perc
   const bar = "█".repeat(filledBlocks) + "▒".repeat(emptyBlocks);
 
   return (
-    <box style={{ flexDirection: "column", marginBottom: 1, flex: 1 }}>
-      <box style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 0 }}>
-        <text fg="#c9d1d9" bold>{label}</text>
-        <text fg="#8b949e">{Math.round(safePercent)}%</text>
+    <box style={{ flexDirection: "column", marginBottom: 1, flex: 1 } as any}>
+      <box style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 0 } as any}>
+        <text style={{ fg: "#c9d1d9", bold: true } as any}>{label}</text>
+        <text style={{ fg: "#8b949e" } as any}>{Math.round(safePercent)}%</text>
       </box>
-      <box style={{ flexDirection: "row", height: 1, flex: 1 }}>
-        <text fg={color} style={{ flex: 1 }}>{bar}</text>
+      <box style={{ flexDirection: "row", height: 1, flex: 1 } as any}>
+        <text style={{ fg: color, flex: 1 } as any}>{bar}</text>
       </box>
     </box>
   );
-}
+});
 
-export function Sparkline({ data, height = 2, color = "#f85149", width }: { data: number[], height?: number, color?: string, width?: number }) {
+export const Sparkline = React.memo(({ data, height = 2, color = "#f85149", width }: { data: number[], height?: number, color?: string, width?: number }) => {
   const sparkWidth = Math.floor(width || 20);
-  if (data.length === 0) return <text fg="#484f58">Initializing...</text>;
+  if (data.length === 0) return <text style={{ fg: "#484f58" } as any}>Initializing...</text>;
 
   const min = Math.min(...data);
   const max = Math.max(...data);
@@ -72,12 +72,12 @@ export function Sparkline({ data, height = 2, color = "#f85149", width }: { data
   const displaySpark = sparkline.slice(-sparkWidth).padStart(sparkWidth, " ");
 
   return (
-    <box style={{ flexDirection: "column", gap: 0, height: height }}>
-      <text fg={color} bold>{displaySpark}</text>
-      <box style={{ flexDirection: "row", justifyContent: "space-between", height: 1 }}>
-        <text fg="#8b949e" style={{ fontSize: 0.8 }}>{Math.floor(min)}°</text>
-        <text fg="#8b949e" style={{ fontSize: 0.8 }}>{Math.floor(max)}°</text>
+    <box style={{ flexDirection: "column", gap: 0, height: height } as any}>
+      <text style={{ fg: color, bold: true } as any}>{displaySpark}</text>
+      <box style={{ flexDirection: "row", justifyContent: "space-between", height: 1 } as any}>
+        <text style={{ fg: "#8b949e" } as any}>{Math.floor(min)}°</text>
+        <text style={{ fg: "#8b949e" } as any}>{Math.floor(max)}°</text>
       </box>
     </box>
   );
-}
+});

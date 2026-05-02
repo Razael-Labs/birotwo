@@ -23,7 +23,7 @@ describe("AI Model Tiers", () => {
       });
     });
     
-    global.fetch = fetchMock;
+    global.fetch = fetchMock as any;
     
     const result = await fetchSarcasm(5);
     expect(result.text).toContain("google/gemma-4-31b-it:free");
@@ -40,7 +40,7 @@ describe("AI Model Tiers", () => {
       });
     });
     
-    global.fetch = fetchMock;
+    global.fetch = fetchMock as any;
     
     const result = await fetchSarcasm(5);
     expect(result.text).toContain("anthropic/claude-3.5-sonnet");
@@ -57,7 +57,7 @@ describe("AI Model Tiers", () => {
       });
     });
     
-    global.fetch = fetchMock;
+    global.fetch = fetchMock as any;
     
     const result = await fetchSarcasm(6);
     expect(result.text).toContain("openai/gpt-oss-120b");
@@ -75,7 +75,7 @@ describe("AI Model Tiers", () => {
       });
     });
     
-    global.fetch = fetchMock;
+    global.fetch = fetchMock as any;
     
     const result = await fetchSarcasm(5);
     expect(result.text).toContain("custom-model");

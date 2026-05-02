@@ -114,12 +114,12 @@ export function useSystemStats(intervalMs: number = 1000) {
           si.time(),
         ]);
 
-        const cpuLoad = results[0].status === 'fulfilled' ? results[0].value : {};
-        const mem = results[1].status === 'fulfilled' ? results[1].value : {};
-        const fsSize = results[2].status === 'fulfilled' ? results[2].value : [];
-        const processes = results[3].status === 'fulfilled' ? results[3].value : {};
-        const cpuTemp = results[4].status === 'fulfilled' ? results[4].value : {};
-        const time = results[5].status === 'fulfilled' ? results[5].value : { uptime: 0 };
+        const cpuLoad = results[0].status === 'fulfilled' ? results[0].value : {} as any;
+        const mem = results[1].status === 'fulfilled' ? results[1].value : {} as any;
+        const fsSize = results[2].status === 'fulfilled' ? results[2].value : [] as any;
+        const processes = results[3].status === 'fulfilled' ? results[3].value : {} as any;
+        const cpuTemp = results[4].status === 'fulfilled' ? results[4].value : {} as any;
+        const time = results[5].status === 'fulfilled' ? results[5].value : { uptime: 0 } as any;
 
         // Termux fallbacks
         let totalMem = (mem && mem.total) || 0;
@@ -129,7 +129,7 @@ export function useSystemStats(intervalMs: number = 1000) {
 
         if (totalMem === 0) {
           try {
-            const { stdout } = await Bun.spawn(["sh", "-c", "free -b"]);
+            const { stdout } = await Bun.spawn(["sh", "-c", "free -b"], { stderr: "ignore" });
             const text = await new Response(stdout).text();
             const lines = text.trim().split('\n');
             const memLine = lines.find(l => l.startsWith('Mem:'));
@@ -146,7 +146,7 @@ export function useSystemStats(intervalMs: number = 1000) {
 
         if (cpuPercentage === 0) {
           try {
-            const { stdout } = await Bun.spawn(["sh", "-c", "top -bn1 | grep '%cpu' | head -n 1"]);
+            const { stdout } = await Bun.spawn(["sh", "-c", "top -bn1 | grep '%cpu' | head -n 1"], { stderr: "ignore" });
             const text = await new Response(stdout).text();
             const idleMatch = text.match(/(\d+)%idle/);
             if (idleMatch) {
@@ -158,7 +158,6 @@ export function useSystemStats(intervalMs: number = 1000) {
         }
 
         const rootFs = (Array.isArray(fsSize) && fsSize.length > 0) ? (fsSize.find(fs => fs.mount === "/") || fsSize[0]) : null;
-        
         const currentTemp = (cpuTemp && cpuTemp.main && cpuTemp.main > 0) ? cpuTemp.main : (35 + Math.random() * 5); 
         
         const formatUptime = (seconds: number) => {
@@ -167,59 +166,64 @@ export function useSystemStats(intervalMs: number = 1000) {
           return `${h}h ${m}m`;
         };
 
-        const newStats: SystemStats = {
-          cpu: {
-            load: cpuPercentage,
-            cores: (cpuLoad && Array.isArray(cpuLoad.cpus)) ? cpuLoad.cpus.map((c: any) => c.load || 0) : [],
-            temp: currentTemp,
-            brand: staticInfo?.cpu?.brand || staticInfo?.cpu?.manufacturer || "Generic CPU",
-          },
-          mem: {
-            total: totalMem,
-            free: freeMem,
-            used: usedMem,
-            active: (mem && mem.active) || usedMem,
-          },
-          disk: {
-            total: rootFs?.size || 0,
-            used: rootFs?.used || 0,
-            available: rootFs?.available || 0,
-            use: rootFs?.use || 0,
-          },
-          processes: {
-            all: (processes && processes.all) || 0,
-            running: (processes && processes.running) || 0,
-            blocked: (processes && processes.blocked) || 0,
-            list: (processes && Array.isArray(processes.list)) ? processes.list.slice(0, 10) : [],
-          },
-          load: {
-            avg1: (cpuLoad && cpuLoad.avgLoad) || 0,
-            avg5: 0, 
-            avg15: 0,
-          },
-          sys: {
-            os: (staticInfo?.os?.distro && staticInfo?.os?.distro !== "unknown") ? staticInfo?.os?.distro : "Termux (Android)",
-            kernel: staticInfo?.os?.kernel || "Unknown",
-            model: staticInfo?.sys?.model || "Generic Device",
-            uptime: formatUptime(time.uptime),
-            shell: process.env.SHELL?.split("/").pop() || "bash",
-            privateIp: networkInfo.private,
-            publicIp: networkInfo.public,
-          },
-          tempHistory: [...history, currentTemp].slice(-20),
-        };
+        setHistory(prev => {
+          const newHistory = [...prev, currentTemp].slice(-20);
+          
+          const newStats: SystemStats = {
+            cpu: {
+              load: cpuPercentage,
+              cores: (cpuLoad && Array.isArray(cpuLoad.cpus)) ? cpuLoad.cpus.map((c: any) => c.load || 0) : [],
+              temp: currentTemp,
+              brand: staticInfo?.cpu?.brand || staticInfo?.cpu?.manufacturer || "Generic CPU",
+            },
+            mem: {
+              total: totalMem,
+              free: freeMem,
+              used: usedMem,
+              active: (mem && mem.active) || usedMem,
+            },
+            disk: {
+              total: rootFs?.size || 0,
+              used: rootFs?.used || 0,
+              available: rootFs?.available || 0,
+              use: rootFs?.use || 0,
+            },
+            processes: {
+              all: (processes && processes.all) || 0,
+              running: (processes && processes.running) || 0,
+              blocked: (processes && processes.blocked) || 0,
+              list: (processes && Array.isArray(processes.list)) ? processes.list.slice(0, 10) : [],
+            },
+            load: {
+              avg1: (cpuLoad && cpuLoad.avgLoad) || 0,
+              avg5: 0, 
+              avg15: 0,
+            },
+            sys: {
+              os: (staticInfo?.os?.distro && staticInfo?.os?.distro !== "unknown") ? staticInfo?.os?.distro : "Termux (Android)",
+              kernel: staticInfo?.os?.kernel || "Unknown",
+              model: staticInfo?.sys?.model || "Generic Device",
+              uptime: formatUptime(time.uptime),
+              shell: process.env.SHELL?.split("/").pop() || "bash",
+              privateIp: networkInfo.private,
+              publicIp: networkInfo.public,
+            },
+            tempHistory: newHistory,
+          };
+          
+          setStats(newStats);
+          return newHistory;
+        });
 
-        setStats(newStats);
-        setHistory(prev => [...prev, currentTemp].slice(-20));
       } catch (error) {
         console.error("Error fetching system stats:", error);
       }
     };
 
-    fetchData();
     const interval = setInterval(fetchData, intervalMs);
+    fetchData(); // Initial fetch
     return () => clearInterval(interval);
-  }, [intervalMs, history, staticInfo, networkInfo]);
+  }, [intervalMs, staticInfo, networkInfo]); // Removed 'history' from dependencies to prevent infinite loops or redundant effect resets
 
   return stats;
 }

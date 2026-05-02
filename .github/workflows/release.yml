@@ -18,7 +18,10 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        run: bun install
+        run: |
+          bun install
+          # Force install native bindings for cross-compilation
+          bun add @opentui/core-linux-x64 @opentui/core-linux-arm64
 
       - name: Build Binaries
         run: |

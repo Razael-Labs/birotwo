@@ -4,7 +4,7 @@
 # Downloads pre-compiled binaries from GitHub Releases
 
 REPO="Razael-Labs/birotwo"
-VERSION="latest" # You can pin this to a specific version like "v1.0.0"
+VERSION="v1.0.0" # Clean final release version
 
 echo "------------------------------------------------"
 echo "  [ B ] BIRO SYSTEM COMMAND INSTALLER"

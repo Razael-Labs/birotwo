@@ -1,51 +1,37 @@
-# Design Document: OpenTUI CLI Screensaver
+# Design Document: AI Model Tiers for OpenRouter, Groq, and Gemini
 
-## 1. Overview
-The goal is to build a functional and visually appealing CLI screensaver using OpenTUI. The application will monitor and display various system metrics in real-time.
+## Objective
+Support two tiers of AI models (Free and Paid) for the OpenRouter, Groq, and Gemini providers in Biro2. This allows users to easily switch between cost-effective free models and high-performance paid models.
 
-## 2. Requirements
-- Display CPU usage (overall and per-core).
-- Display RAM usage (Used, Free, Total).
-- Display Disk usage (Root partition).
-- Display top processes (CPU/Memory).
-- Display background processes/system load.
-- Real-time updates (e.g., every 1 second).
-- Clean, modular layout with borders and colors.
-- Interactive exit (Ctrl+C).
+## Proposed Changes
 
-## 3. Architecture
-- **Framework**: OpenTUI with React bindings.
-- **Metrics**: `systeminformation` library for cross-platform system data.
-- **State Management**: React `useState` and `useEffect` for polling and updates.
-- **Layout**: Flexbox-based layout using OpenTUI `<box>` and `<text>` components.
+### 1. Environment Configuration (`.env`)
+Introduce a new environment variable `AI_TIER` to toggle between free and paid models.
+- `AI_TIER=1`: Use free models (default).
+- `AI_TIER=2`: Use paid models.
 
-## 4. Component Breakdown
-### 4.1 `useSystemStats` Hook
-A custom hook that encapsulates polling logic:
-- `cpu`: load, temperatures (if available).
-- `mem`: total, free, used, active.
-- `fsSize`: disk usage.
-- `processes`: list of processes.
+Update `.env.example` to include this variable and document the models for each provider.
 
-### 4.2 `StatBox` Component
-A reusable wrapper for widgets:
-- Props: `title`, `children`, `flex`, `style`.
-- Visual: Bordered box with a title.
+### 2. AI Utility (`src/utils/ai.ts`)
+Modify the `fetchSarcasm` function and provider-specific calls to respect the `AI_TIER` setting.
 
-### 4.3 `Dashboard` Component
-The root UI component:
-- Top Row: CPU and RAM stats.
-- Middle Row: Disk usage and System Load.
-- Bottom Row: Process list.
+#### Default Models per Provider & Tier
 
-## 5. Implementation Plan
-1. Initialize Bun project and install `@opentui/core`, `@opentui/react`, and `systeminformation`.
-2. Create `src/hooks/useSystemStats.ts`.
-3. Create `src/components/StatBox.tsx` and specific widgets.
-4. Assemble `src/App.tsx`.
-5. Create `src/index.tsx` to initialize the renderer.
+| Provider | Tier 1 (Free) | Tier 2 (Paid) |
+| :--- | :--- | :--- |
+| **OpenRouter** | `openrouter/mimo-v2-pro:free` | `anthropic/claude-3.5-sonnet` |
+| **Groq** | `llama-3.3-70b-versatile` | `llama-3.1-405b-reasoning` |
+| **Gemini** | `gemini-1.5-flash` | `gemini-1.5-pro` |
 
-## 6. Testing Strategy
-- Manual verification of metrics against system tools (top, htop, df).
-- Verification of UI responsiveness (resizing terminal).
-- Long-running stability test (memory leaks).
+#### Logic Flow
+1. Read `PROVIDER` and `AI_TIER` from `process.env`.
+2. Determine the default model based on the selected provider and tier.
+3. Allow overrides via existing `*_MODEL` environment variables if they are set.
+
+### 3. User Interface
+No changes are required to the UI, as it already displays the provider name. The `Footer` component will automatically use the configured tier.
+
+## Verification Plan
+1. Set `AI_TIER=1` and verify that free models are used (check via logs or behavior if possible).
+2. Set `AI_TIER=2` and verify that paid models are used.
+3. Verify that manual overrides (`OPENROUTER_MODEL`, etc.) still work and take precedence.

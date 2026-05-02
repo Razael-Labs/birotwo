@@ -24,6 +24,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Configure Git Bot
+        run: |
+          git config --global user.name "RzLabs"
+          git config --global user.email "280991174+RzLabs@users.noreply.github.com"
+
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest

@@ -1,26 +1,20 @@
-# Implementation Plan: OpenTUI CLI Screensaver
+# Implementation Plan: AI Model Tiers
 
-## Phase 1: Setup & Scaffolding
-- Initialize project with `bun init -y`.
-- Install dependencies: `@opentui/core`, `@opentui/react`, `systeminformation`, `react`, `@types/react`.
-- Configure `tsconfig.json` for OpenTUI React (jsxImportSource).
-- Create basic directory structure.
+This plan implements support for free and paid model tiers for OpenRouter, Groq, and Gemini.
 
-## Phase 2: Data Collection (Hooks)
-- Implement `useSystemStats` hook in `src/hooks/useSystemStats.ts`.
-- Use `systeminformation.getDynamicData()` or specific functions for CPU, Memory, Disk, and Processes.
-- Implement polling interval (1s).
+## Phases
 
-## Phase 3: UI Components
-- Implement `StatBox` in `src/components/StatBox.tsx`.
-- Implement `CPUWidget`, `MemoryWidget`, `DiskWidget`, and `ProcessWidget`.
-- Use bars or percentage indicators for visual impact.
+### Phase 1: Environment Configuration
+- **Task**: Update `.env.example` to include `AI_TIER` and updated model documentation.
+- **Agent**: `technical_writer`
+- **Files**: `.env.example`
 
-## Phase 4: Main Application
-- Create `src/App.tsx` to arrange widgets using flexbox.
-- Implement `src/index.tsx` to bootstrap the OpenTUI renderer.
+### Phase 2: Logic Implementation
+- **Task**: Update `src/utils/ai.ts` to implement tier-based model selection.
+- **Agent**: `coder`
+- **Files**: `src/utils/ai.ts`
 
-## Phase 5: Validation
-- Run the application with `bun src/index.tsx`.
-- Verify metrics and UI layout.
-- Final adjustments for aesthetics.
+### Phase 3: Validation
+- **Task**: Create a test script to verify that the correct models are selected based on `AI_TIER`.
+- **Agent**: `tester`
+- **Files**: `src/utils/ai_test.ts` (new)
